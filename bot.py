@@ -9,6 +9,7 @@ from aiogram.enums import ParseMode
 from config import BOT_TOKEN
 from image_gen import generate_photo
 from video_gen import generate_video_from_prompt
+from translation_cost import calculate_translation_cost
 
 
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +28,7 @@ async def start_cmd(message: types.Message):
     await message.answer(
         "🎨 *Генератор фото и видео*\n\n"
         "📸 `/photo кот в космосе` — сгенерировать фото (0.30₽)\n"
-        "🎬 `/video закат на море` — сгенерировать видео с эффектом наезда (0.30₽)\n"
+        "🎬 `/video закат на море` — сгенерировать видео с эффектом (0.30₽)\n"
         "ℹ️ `/stats` — статистика использования\n\n",
         parse_mode=ParseMode.MARKDOWN
     )
@@ -44,16 +45,19 @@ async def photo_cmd(message: types.Message):
         )
         return
 
+    translation_cost = calculate_translation_cost(prompt)
+
     status_msg = await message.answer("🎨 Генерирую фото... 2-5 секунд")
 
     try:
-        image_url, cost = await asyncio.to_thread(generate_photo, prompt)
+        image_url, gen_cost = await asyncio.to_thread(generate_photo, prompt)
         stats["photos"] += 1
+        total_cost = gen_cost + translation_cost
 
         await bot.send_photo(
             message.chat.id,
             image_url,
-            caption=f"✅ Готово!\n💰 Стоимость: {cost:.2f}₽\n🎨 {prompt[:100]}",
+            caption = f"✅ Готово!\n💰 {total_cost:.2f}₽ (генерация {gen_cost:.2f}₽ + перевод {translation_cost:.2f}₽)\n🎨 {prompt[:100]}",
         )
 
         await status_msg.delete()
@@ -74,20 +78,23 @@ async def video_cmd(message: types.Message):
         )
         return
 
+    translation_cost = calculate_translation_cost(prompt)
+
     status_msg = await message.answer("🎬 Генерирую видео... 5-10 секунд")
 
     video_path = None
     try:
-        video_path, cost = await asyncio.to_thread(
+        video_path, gen_cost = await asyncio.to_thread(
             generate_video_from_prompt, prompt, "zoom_in", 5
         )
         stats["videos"] += 1
+        total_cost = gen_cost + translation_cost
 
         video_file = FSInputFile(video_path)
         await bot.send_video(
             message.chat.id,
             video_file,
-            caption=f"✅ Видео готово!\n💰 Стоимость: {cost:.2f}₽\n🎬 Эффект: наезд камеры\n🎨 {prompt[:100]}",
+            caption = f"✅ Готово!\n💰 {total_cost:.2f}₽ (генерация {gen_cost:.2f}₽ + перевод {translation_cost:.2f}₽)\n🎨 {prompt[:100]}"
         )
 
         os.remove(video_path)
@@ -108,7 +115,7 @@ async def video_cmd(message: types.Message):
 async def stats_cmd(message: types.Message):
     total_photos = stats["photos"]
     total_videos = stats["videos"]
-    total_cost = (total_photos + total_videos) * 0.30
+    total_cost = (stats["photos"] + stats["videos"]) * 0.30 + stats["translation_cost"]
 
     await message.answer(
         f"📊 *Статистика использования*\n\n"
