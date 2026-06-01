@@ -1,10 +1,14 @@
 import time
 import requests
+import logging
 from config import GEN_API_KEY, PHOTO_COST_RUB
+
+logger = logging.getLogger(__name__)
 
 NETWORK_ID = "sdxl-lightning"
 
 BASE_URL = "https://api.gen-api.ru/api/v1"
+
 
 def generate_photo(prompt: str, width: int = 1024, height: int = 1024):
     """
@@ -13,65 +17,67 @@ def generate_photo(prompt: str, width: int = 1024, height: int = 1024):
     """
     headers = {
         "Authorization": f"Bearer {GEN_API_KEY}",
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
     }
 
-    # ЗАПРОС
     payload = {
         "model": "standard",
         "prompt": prompt,
         "width": width,
-        "height": height,
+        "height": height
     }
 
+    logger.info(f"Отправка запроса к {BASE_URL}/networks/{NETWORK_ID}")
     response = requests.post(
         f"{BASE_URL}/networks/{NETWORK_ID}",
         json=payload,
         headers=headers,
-        timeout=30,
+        timeout=30
     )
     response.raise_for_status()
 
     data = response.json()
+    logger.info(f"Ответ на запрос: {data}")
+
     request_id = data.get("request_id")
 
     if not request_id:
-        raise Exception("Не получен request_id от API")
+        raise Exception(f"Не получен request_id. Ответ API: {data}")
 
-    # РЕЗУЛЬТАТ
-    max_attempts = 30
+    max_attempts = 60  # 60 секунд максимум
     attempt = 0
 
     while attempt < max_attempts:
-        try:
-            result_response = requests.get(
-                f"{BASE_URL}/request/get/{request_id}",
-                headers=headers,
-                timeout=30,
-            )
-            result_response.raise_for_status()
-            result = result_response.json()
+        result_response = requests.get(
+            f"{BASE_URL}/request/get/{request_id}",
+            headers=headers,
+            timeout=10
+        )
+        result_response.raise_for_status()
+        result = result_response.json()
 
-            status = result.get("status")
+        logger.info(f"Попытка {attempt + 1}: статус {result.get('status')}")
 
-            if status == "completed":
-                images = result.get("result")
+        status = result.get("status")
 
-                if not images:
-                    raise Exception("Пустой результат генерации")
+        if status in ["completed", "success"]:
+            result_array = result.get("result", [])
+            if not result_array:
+                raise Exception("Результат генерации не содержит URL")
 
-                image_url = images[0]
+            image_url = result_array[0]
+            logger.info(f"Генерация завершена, URL: {image_url}")
 
-                return image_url, PHOTO_COST_RUB
 
-            elif status == "failed":
-                error = result.get("error", "Неизвестная ошибка")
-                raise Exception(f"Генерация не удалась: {error}")
+            cost_rub = PHOTO_COST_RUB
 
-            time.sleep(1)
-            attempt += 1
+            return image_url, cost_rub
 
-        except requests.exceptions.RequestException as e:
-            raise e
+        elif status == "failed":
+            error = result.get("error", "Неизвестная ошибка")
+            raise Exception(f"Генерация не удалась: {error}")
 
-    raise Exception("Таймаут ожидания генерации")
+        time.sleep(1)
+        attempt += 1
+
+    raise Exception(f"Таймаут ожидания генерации. request_id={request_id}")
