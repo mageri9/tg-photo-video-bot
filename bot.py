@@ -35,7 +35,7 @@ async def start_cmd(message: types.Message):
 
 @dp.message(Command("photo"))
 async def photo_cmd(message: types.Message):
-    prompt = message.text.replace("/photo", "").strip()
+    prompt = message.text.removeprefix("/photo").removeprefix("/video").strip()
 
     if not prompt:
         await message.answer(
@@ -47,7 +47,7 @@ async def photo_cmd(message: types.Message):
     status_msg = await message.answer("🎨 Генерирую фото... 2-5 секунд")
 
     try:
-        image_url, cost = generate_photo(prompt)
+        image_url, cost = await asyncio.to_thread(generate_photo, prompt)
         stats["photos"] += 1
 
         await bot.send_photo(
@@ -76,9 +76,10 @@ async def video_cmd(message: types.Message):
 
     status_msg = await message.answer("🎬 Генерирую видео... 5-10 секунд")
 
+    video_path = None
     try:
-        video_path, cost = generate_video_from_prompt(
-            prompt, preset="zoom_in", duration=5
+        video_path, cost = await asyncio.to_thread(
+            generate_video_from_prompt, prompt, "zoom_in", 5
         )
         stats["videos"] += 1
 
@@ -94,8 +95,13 @@ async def video_cmd(message: types.Message):
         await status_msg.delete()
 
     except Exception as e:
-        logger.error(f"Video generation error: {e}")
+        logger.exception("Photo generation error")
+
         await status_msg.edit_text(f"❌ Ошибка: {str(e)[:200]}")
+
+    finally:
+        if video_path and os.path.exists(video_path):
+            os.remove(video_path)
 
 
 @dp.message(Command("stats"))
