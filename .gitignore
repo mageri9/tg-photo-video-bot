@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+temp_*.jpg
+temp_*.mp4
+*.mp4
+*.log
+.DS_Store
+venv/
