@@ -7,3 +7,4 @@ temp_*.mp4
 *.log
 .DS_Store
 venv/
+.idea/
