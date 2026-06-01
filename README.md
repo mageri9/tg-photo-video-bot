@@ -1,4 +1,4 @@
-[МИНИМАЛЬНО РАБОТАЮЩИЙ БОТ!]<img width="1183" height="1001" alt="Image" src="https://github.com/user-attachments/assets/a31a7c48-1965-49d8-8167-af34f8e28474" />](https://github.com/mageri9/tg-photo-video-bot/issues/1#issue-4561237030)
+[МИНИМАЛЬНО РАБОТАЮЩИЙ БОТ, не рассчитан на поток!]<img width="1183" height="1001" alt="Image" src="https://github.com/user-attachments/assets/a31a7c48-1965-49d8-8167-af34f8e28474" />](https://github.com/mageri9/tg-photo-video-bot/issues/1#issue-4561237030)
 
 ## 📊 Анализ цен (за 1 фото)
 
