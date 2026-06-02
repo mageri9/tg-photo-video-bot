@@ -46,7 +46,7 @@ async def photo_cmd(message: types.Message):
     status_msg = await message.answer("🎨 Генерирую фото... 2-5 секунд")
 
     try:
-        image_url, gen_cost = await asyncio.to_thread(generate_photo, prompt)
+        image_url, gen_cost = await generate_photo(prompt)
         total_cost = gen_cost + translation_cost
 
         stats["photos"] += 1
@@ -79,9 +79,7 @@ async def video_cmd(message: types.Message):
     video_path = None
 
     try:
-        video_path, gen_cost = await asyncio.to_thread(
-            generate_video_from_prompt, prompt, "zoom_in", 5
-        )
+        video_path, gen_cost = await generate_video_from_prompt(prompt, "zoom_in", 5)
         total_cost = gen_cost + translation_cost
 
         stats["videos"] += 1
